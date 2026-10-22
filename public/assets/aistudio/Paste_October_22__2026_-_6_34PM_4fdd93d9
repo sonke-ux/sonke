@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eThekwini Municipal Rates Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Add jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0ea5e9', // Sky 500
+                        primaryHover: '#0284c7', // Sky 600
+                        secondary: '#0f172a', // Slate 900
+                        background: '#f8fafc', // Slate 50
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: theme('colors.background'); }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid theme('colors.primary');
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes bounceFace {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+        .animate-face { animation: bounceFace 1.5s ease-in-out infinite; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+
+    <!-- Greeting Overlay -->
+    <div id="greetingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm mx-4 text-center border border-slate-100">
+            <div class="w-20 h-20 bg-sky-500 rounded-full flex items-center justify-center text-white shadow-lg mb-4 animate-face">
+                <i class="fa-solid fa-face-smile text-4xl"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-900 mb-1" id="greetingTitle">Welcome to MuniRates</h3>
+            <p class="text-slate-500 text-sm mb-6" id="greetingSubtitle">Loading eThekwini Municipal Portal with Gemini AI...</p>
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3 flex-1">
+                    <button onclick="goHome()" class="flex items-center gap-3 hover:opacity-80 transition-opacity text-left cursor-pointer">
+                        <div class="bg-primary text-white p-2 rounded-lg">
+                            <i class="fa-solid fa-building-columns text-xl"></i>
+                        </div>
+                        <span class="font-bold text-xl text-secondary tracking-tight">Muni<span class="text-primary">Rates</span></span>
+                    </button>
+                </div>
+                
+                <!-- Center AI Search & Auth Status -->
+                <div class="hidden md:flex flex-col flex-1 justify-center items-center w-full px-4">
+                    <div class="relative w-full max-w-md group">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-wand-magic-sparkles text-primary group-focus-within:animate-pulse"></i>
+                        </div>
+                        <input type="text" id="globalAiSearch" onkeydown="handleGlobalSearch(event)" placeholder="Ask Gemini AI: How do I dispute my valuation?" class="block w-full pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-inner">
+                    </div>
+                    
+                    <!-- Pre-login auth block -->
+                    <div class="flex items-center gap-3 mt-1.5" id="adminAuthBlock">
+                        <button onclick="openAdminModal()" class="text-[10px] uppercase tracking-wider font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-lock"></i> Staff / Admin Access
+                        </button>
+                        <span class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full" title="Gemini AI Security Agent Active: Bot protection and traffic encryption enabled.">
+                            <i class="fa-solid fa-shield-halved"></i> AI Secured
+                        </span>
+                    </div>
+
+                    <!-- Post-login user info block -->
+                    <div class="hidden items-center gap-2 mt-1.5 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shadow-inner" id="adminLoggedInBlock">
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-user text-slate-400 text-sm"></i> 
+                            Logged in as: <span id="loggedInAdminName" class="capitalize text-primary"></span>
+                        </span>
+                        <div class="w-px h-3 bg-slate-300 mx-1"></div>
+                        <span id="loggedInAdminRole" class="text-[10px] uppercase tracking-wider font-bold text-white px-2 py-0.5 rounded-full shadow-sm"></span>
+                    </div>
+                </div>
+
+                <!-- Right Side Actions -->
+                <div class="flex items-center gap-4 flex-1 justify-end">
+                    <button id="inboxNavBtn" onclick="openInboxModal()" class="text-slate-500 hover:text-primary transition-colors relative hidden cursor-pointer" title="Municipal Inbox">
+                        <i class="fa-regular fa-envelope text-xl"></i>
+                        <span id="inboxBadge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">2</span>
+                    </button>
+                    <button onclick="openResidentAuthModal()" id="userProfileBtn" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 transition-colors px-3 py-1.5 rounded-full text-slate-600 font-semibold cursor-pointer border border-slate-200 shadow-sm">
+                        <i class="fa-solid fa-user text-sm"></i>
+                        <span id="userNameDisplay" class="text-sm">Resident Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col items-center pt-10 pb-16 px-4 sm:px-6 lg:px-8 w-full max-w-6xl mx-auto">
+        
+        <!-- Header Text -->
+        <div class="text-center mb-10 w-full" id="headerSection">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3 tracking-tight">Check Municipal Rates</h1>
+            <p class="text-slate-500 max-w-2xl mx-auto text-base md:text-lg">Easily view your property details, outstanding balances, and recent municipal billing history. Powered by Gemini AI for instant assistance.</p>
+        </div>
+
+        <!-- Search Card -->
+        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 mb-8" id="searchSection">
+            <form id="searchForm" class="flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                    <label for="searchQuery" class="text-sm font-semibold text-slate-700">Search by Account Number or SA ID Number</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                        </div>
+                        <input type="text" id="searchQuery" name="searchQuery" required placeholder="e.g. 123456789 or 9001015000000" 
+                            class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-shadow">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-shield-halved mr-1"></i> Gemini AI secure encrypted connection.</p>
+                </div>
+                <button type="submit" class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primaryHover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors cursor-pointer">
+                    <span>Find Account</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden flex-col items-center justify-center py-12 w-full">
+            <div class="loader mb-4"></div>
+            <p class="text-slate-500 font-medium">Retrieving account records via Gemini AI...</p>
+        </div>
+
+        <!-- Resident Dashboard -->
+        <div id="dashboardSection" class="hidden w-full flex-col gap-6 fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900" id="dashName">Account Owner: John Doe</h2>
+                    <p class="text-slate-500 text-sm mt-1">Account No: <span id="dashAccNo" class="font-medium text-slate-700"></span></p>
+                </div>
+                <button onclick="resetSearch()" class="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <i class="fa-solid fa-rotate-left"></i> New Search
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Outstanding Balance -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Amount Due</h3>
+                            <i class="fa-solid fa-wallet text-rose-500"></i>
+                        </div>
+                        <div class="text-3xl font-extrabold text-slate-900 mb-1" id="dashBalance">R 0.00</div>
+                        <p class="text-sm font-medium text-rose-600 bg-rose-50 inline-block px-2 py-0.5 rounded text-xs mt-1">Due by <span id="dashDueDate"></span></p>
+                    </div>
+                    <div class="mt-5 relative z-10">
+                        <button onclick="openPaymentModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2 cursor-pointer">
+                            Pay Now <i class="fa-regular fa-credit-card"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Last Payment -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Last Payment Received</h3>
+                        <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900 mb-1" id="dashLastPayment">R 0.00</div>
+                    <p class="text-sm text-slate-500 mt-1">Processed on <span id="dashLastPaymentDate" class="font-medium"></span></p>
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button onclick="generateReceiptPDF()" class="text-sm text-primary hover:text-primaryHover font-medium flex items-center gap-1 cursor-pointer">Download Receipt <i class="fa-solid fa-download text-xs"></i></button>
+                    </div>
+                </div>
+
+                <!-- Property Details -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                     <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Property Information</h3>
+                        <i class="fa-solid fa-house-chimney text-primary"></i>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Physical Address</p>
+                            <p class="text-sm font-semibold text-slate-800 leading-tight" id="dashAddress"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Municipal Valuation</p>
+                            <div class="flex justify-between items-center">
+                                <p class="text-sm font-semibold text-slate-800" id="dashValuation"></p>
+                                <button onclick="askAIAssistant('valuation')" class="text-xs text-primary hover:text-primaryHover font-medium flex items-center gap-1 bg-sky-50 px-2 py-1 rounded transition-colors cursor-pointer" title="Ask Gemini AI about this valuation">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Explain
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outstanding Monthly Payments Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div class="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-clock-rotate-left text-rose-500 mr-2"></i>Outstanding Monthly Payments</h3>
+                    <button onclick="askAIAssistant('billing')" class="text-sm text-primary hover:text-primaryHover font-medium bg-sky-50 border border-sky-100 transition-colors px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Gemini AI Analysis
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                <th class="px-6 py-4 font-semibold">Month</th>
+                                <th class="px-6 py-4 font-semibold">Description</th>
+                                <th class="px-6 py-4 font-semibold text-right">Amount (ZAR)</th>
+                                <th class="px-6 py-4 font-semibold text-center">Status</th>
+                                <th class="px-6 py-4 font-semibold text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outstandingBillingTableBody" class="text-sm divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Cleared Monthly Payments Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-circle-check text-emerald-500 mr-2"></i>Cleared Monthly Payments</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                <th class="px-6 py-4 font-semibold">Month</th>
+                                <th class="px-6 py-4 font-semibold">Description</th>
+                                <th class="px-6 py-4 font-semibold text-right">Amount (ZAR)</th>
+                                <th class="px-6 py-4 font-semibold text-center">Status</th>
+                                <th class="px-6 py-4 font-semibold text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clearedBillingTableBody" class="text-sm divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin & Staff Dashboard -->
+        <div id="adminDashboardSection" class="hidden w-full flex-col gap-6 fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900" id="adminDashboardTitle"><i class="fa-solid fa-shield-halved text-primary mr-2"></i>Admin Dashboard</h2>
+                    <p class="text-slate-500 text-sm mt-1">Overview of Accounts, Monthly Payments Tracking & Gemini AI Arrears Agent</p>
+                </div>
+                <button onclick="logoutAdmin()" class="text-sm font-medium text-rose-500 hover:text-rose-700 flex items-center gap-2 transition-colors border border-rose-200 px-4 py-2 rounded-lg hover:bg-rose-50 shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Secure Logout
+                </button>
+            </div>
+
+            <!-- Admin Search Bar Section -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="bg-primary/10 p-3 rounded-xl text-primary flex items-center justify-center">
+                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                </div>
+                <div class="flex-1 relative">
+                    <input type="text" id="adminAccountSearchInput" oninput="filterAdminTable()" placeholder="Search accounts by name or account number..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all">
+                </div>
+                <div class="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500">
+                    <i class="fa-solid fa-filter text-primary"></i> Live Database Search
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-rose-500">
+                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Arrears</h3>
+                    <div class="text-2xl font-extrabold text-slate-900" id="adminTotalDebt">R 0.00</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-emerald-500">
+                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Payments Made vs Due</h3>
+                    <div class="text-2xl font-extrabold text-slate-900" id="adminPaymentsRatio">0 / 0</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-amber-500">
+                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Accounts in Arrears</h3>
+                    <div class="text-2xl font-extrabold text-slate-900" id="adminTotalAccounts">0</div>
+                </div>
+                <div class="bg-slate-900 rounded-2xl p-6 shadow-sm flex flex-col justify-center relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 w-24 h-24 bg-emerald-500/10 rounded-bl-full z-0 group-hover:bg-emerald-500/20 transition-colors"></div>
+                    <div class="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-robot mr-1"></i> Gemini AI Tracker</h3>
+                            <p class="text-xs text-slate-400">Monthly tracking & notices</p>
+                        </div>
+                        <button onclick="runAiScanModal()" class="mt-4 w-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold py-2 rounded-xl transition-colors shadow-sm cursor-pointer">
+                            Run Monthly Scan & Send Notices
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-lg font-bold text-slate-800">Ratepayer Accounts & Monthly Status</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                <th class="px-6 py-4 font-semibold">Account No.</th>
+                                <th class="px-6 py-4 font-semibold">Ratepayer Name</th>
+                                <th class="px-6 py-4 font-semibold text-right">Outstanding (ZAR)</th>
+                                <th class="px-6 py-4 font-semibold text-center">Status</th>
+                                <th class="px-6 py-4 font-semibold text-center">Action / Clearance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="text-sm divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Account Modal -->
+    <div id="editAccountModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 transform scale-95 transition-transform duration-300" id="editAccountModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-pen-to-square text-primary mr-2"></i>Edit Resident Account Details</h3>
+                <button onclick="closeEditAccountModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <form id="editAccountForm" onsubmit="event.preventDefault(); saveAccountEdits();" class="flex flex-col gap-4">
+                    <input type="hidden" id="editAccNo">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ratepayer Name</label>
+                        <input type="text" id="editAccName" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Monthly Rates & Status</label>
+                        <div id="editMonthlyRatesContainer" class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+                    </div>
+                    <button type="submit" class="w-full mt-2 bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">
+                        Save Account Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-8 mt-auto">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p class="text-slate-500 text-sm">© 2026 Municipal Rates Portal. All rights reserved.</p>
+            <div class="flex gap-4 text-slate-400">
+                <a href="#" class="hover:text-primary transition-colors"><i class="fa-brands fa-facebook text-xl"></i></a>
+                <a href="#" class="hover:text-primary transition-colors"><i class="fa-brands fa-twitter text-xl"></i></a>
+                <a href="#" class="hover:text-primary transition-colors"><i class="fa-solid fa-envelope text-xl"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300" id="paymentModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800">Secure Payment</h3>
+                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex justify-between items-center">
+                    <span class="text-slate-600 font-medium">Amount to Pay</span>
+                    <span class="text-2xl font-bold text-slate-900" id="modalAmount">R 0.00</span>
+                </div>
+                <div class="space-y-4">
+                    <p class="text-sm font-semibold text-slate-700">Select Payment Method</p>
+                    <label class="flex items-center justify-between p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-primary hover:bg-sky-50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-regular fa-credit-card text-xl text-primary"></i>
+                            <span class="font-medium text-slate-800">Credit / Debit Card</span>
+                        </div>
+                        <input type="radio" name="payment_method" checked class="text-primary focus:ring-primary h-4 w-4">
+                    </label>
+                    <label class="flex items-center justify-between p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-primary hover:bg-sky-50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-building-columns text-xl text-emerald-600"></i>
+                            <span class="font-medium text-slate-800">Instant EFT (Ozow)</span>
+                        </div>
+                        <input type="radio" name="payment_method" class="text-primary focus:ring-primary h-4 w-4">
+                    </label>
+                </div>
+                <button onclick="processMockPayment()" class="w-full mt-8 bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-lock text-sm"></i> Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 text-center transform scale-95 transition-transform duration-300" id="successModalContent">
+            <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-check text-3xl text-emerald-500"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Payment Successful!</h3>
+            <p class="text-slate-500 mb-6 text-sm">Your rates account has been updated successfully.</p>
+            <button onclick="closeSuccessModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer">
+                Return to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Resident Auth Modal -->
+    <div id="residentAuthModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 my-8 transform scale-95 transition-transform duration-300 relative" id="residentAuthModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-house-user text-primary mr-2"></i>Resident Portal</h3>
+                <button onclick="closeResidentAuthModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="flex border-b border-slate-200">
+                <button onclick="toggleAuthMode('login')" id="tabLogin" class="flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary bg-sky-50/50 transition-colors cursor-pointer">Login</button>
+                <button onclick="toggleAuthMode('register')" id="tabRegister" class="flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 transition-colors cursor-pointer">Sign Up</button>
+            </div>
+            <div class="p-6">
+                <!-- Login Form -->
+                <form id="residentLoginForm" onsubmit="event.preventDefault(); processResidentLogin();" class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">SA ID Number</label>
+                        <input type="text" id="loginIdNum" required placeholder="e.g. 9001015000000" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <input type="password" id="loginPassword" required placeholder="Enter password" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div class="mt-2 flex items-center gap-3 p-3 border border-slate-200 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" onclick="runBotCheck('login')">
+                        <div id="loginBotBox" class="w-6 h-6 border-2 border-slate-300 rounded bg-white flex items-center justify-center"></div>
+                        <span class="text-sm font-medium text-slate-700 select-none">Verify you are human</span>
+                        <input type="hidden" id="loginBotPassed" value="false">
+                    </div>
+                    <button type="submit" class="w-full mt-2 bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="residentRegisterForm" onsubmit="event.preventDefault(); processResidentRegister();" class="hidden flex-col gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                        <input type="text" id="regFullName" required placeholder="John Doe" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">SA Identity Number</label>
+                        <input type="text" id="regIdNum" required pattern="[0-9]{13}" placeholder="13 Digit ID Number" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Street No.</label>
+                            <input type="text" id="regStreetNum" required placeholder="45" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Street Name</label>
+                            <input type="text" id="regStreetName" required placeholder="Baobab Avenue" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Suburb / Township</label>
+                        <input type="text" id="regSuburb" required placeholder="Morningside, Durban" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Create Password</label>
+                        <input type="password" id="regPassword" required minlength="6" placeholder="Minimum 6 characters" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div class="mt-2 flex items-center gap-3 p-3 border border-slate-200 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" onclick="runBotCheck('register')">
+                        <div id="regBotBox" class="w-6 h-6 border-2 border-slate-300 rounded bg-white flex items-center justify-center"></div>
+                        <span class="text-sm font-medium text-slate-700 select-none">Verify you are human</span>
+                        <input type="hidden" id="regBotPassed" value="false">
+                    </div>
+                    <button type="submit" class="w-full mt-2 bg-secondary hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">
+                        Create Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300" id="adminModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-shield-halved text-primary mr-2"></i>Staff & Admin Access</h3>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="adminLoginForm" onsubmit="event.preventDefault(); processAdminLogin();" class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Username (Sonke, Londi, or Sizwe)</label>
+                        <input type="text" id="adminUsername" required placeholder="Enter username" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <input type="password" id="adminPassword" required placeholder="Enter password" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none text-sm">
+                    </div>
+                    <div id="aiSecurityLog" class="hidden bg-slate-900 text-emerald-400 font-mono text-xs p-3 rounded-xl space-y-1 shadow-inner">
+                        <p class="text-slate-400"><i class="fa-solid fa-robot mr-1"></i> Gemini AI Security Agent active...</p>
+                        <p id="secStep1" class="opacity-0 transition-opacity">[+] Inspecting traffic payload & headers...</p>
+                        <p id="secStep2" class="opacity-0 transition-opacity">[+] Running heuristic bot detection...</p>
+                        <p id="secStep3" class="opacity-0 transition-opacity">[+] Validating admin role privileges...</p>
+                        <p id="secStep4" class="opacity-0 transition-opacity text-emerald-300 font-bold">[✔] Security clearance granted.</p>
+                    </div>
+                    <p id="adminLoginError" class="text-rose-500 text-xs font-semibold hidden">Access Denied. Only Sonke, Londi, and Sizwe are authorized.</p>
+                    <button type="submit" id="adminLoginBtn" class="w-full mt-2 bg-secondary hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                        Login to Dashboard <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Municipal Inbox Modal -->
+    <div id="inboxModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 transform scale-95 transition-transform duration-300 overflow-hidden" id="inboxModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+                <div class="flex items-center gap-2">
+                    <div class="bg-primary/10 p-2 rounded-lg text-primary">
+                        <i class="fa-solid fa-envelope-open-text text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Municipal Inbox</h3>
+                        <p class="text-xs text-slate-500">Official messages & AI arrears reminders</p>
+                    </div>
+                </div>
+                <button onclick="closeInboxModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="inboxMessagesContainer" class="p-6 max-h-[60vh] overflow-y-auto space-y-4"></div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-center">
+                <button onclick="closeInboxModal()" class="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Close Inbox</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Scan Modal -->
+    <div id="aiScanModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 transform scale-95 transition-transform duration-300" id="aiScanModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-900 text-white rounded-t-2xl">
+                <h3 class="text-lg font-bold"><i class="fa-solid fa-robot text-emerald-400 mr-2"></i>Gemini AI Arrears Messenger Agent</h3>
+                <button onclick="closeAiScanModal()" class="text-slate-400 hover:text-white transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="aiScanLoader" class="flex flex-col items-center justify-center py-8">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-emerald-500 mb-4"></i>
+                    <p class="text-slate-600 font-medium">Scanning database with Gemini AI & dispatching notices...</p>
+                </div>
+                <div id="aiScanResults" class="hidden flex-col gap-4">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                        <h4 class="font-bold text-emerald-800 mb-1">Gemini AI Agent Dispatch Report</h4>
+                        <ul class="text-sm text-emerald-700 space-y-2">
+                            <li><i class="fa-solid fa-check-circle mr-1"></i> <strong>5</strong> unpaid accounts detected in database.</li>
+                            <li><i class="fa-solid fa-paper-plane mr-1"></i> Automated reminder notices successfully pushed to resident inboxes.</li>
+                            <li><i class="fa-solid fa-wallet mr-1"></i> Total Arrears Flagged: <strong>R 58,421.25</strong></li>
+                        </ul>
+                    </div>
+                    <button onclick="closeAiScanModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">Acknowledge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paid Up Modal -->
+    <div id="paidUpModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300" id="paidUpModalContent">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-file-signature text-emerald-500 mr-2"></i>Monthly Clearance Letter</h3>
+                <button onclick="closePaidUpModal()" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <p class="text-sm text-slate-500" id="paidUpModalSubtitle">Edit letter content below.</p>
+                <textarea id="paidUpMessage" class="w-full h-32 p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:outline-none"></textarea>
+                
+                <div id="stampControlBox" class="bg-slate-50 border border-slate-200 p-3 rounded-xl hidden">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="applyStampCheckbox" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded cursor-pointer">
+                        <span class="font-bold text-slate-700 text-sm">Verify & Apply Official Admin Stamp (Sonke Only)</span>
+                    </label>
+                </div>
+                <div id="staffWarningBox" class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-800 hidden">
+                    <i class="fa-solid fa-lock mr-1"></i> Staff mode: You can edit the letter draft, but strictly only Admin Sonke can verify and apply the official approval stamp.
+                </div>
+
+                <input type="hidden" id="paidUpAccNo">
+                <input type="hidden" id="paidUpMonthIndex">
+                
+                <button onclick="downloadPaidUpPDF()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors flex justify-center items-center gap-2 shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-download"></i> Generate Monthly PDF Letter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chat FAB -->
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-primary hover:bg-primaryHover text-white rounded-full p-4 shadow-xl transition-transform hover:scale-110 z-40 flex items-center justify-center cursor-pointer" title="Chat with Gemini AI">
+        <i class="fa-solid fa-robot text-2xl"></i>
+    </button>
+
+    <!-- AI Chat Window -->
+    <div id="aiChatWindow" class="fixed bottom-24 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 hidden flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right scale-0 opacity-0">
+        <div class="bg-primary p-4 text-white flex justify-between items-center shadow-md z-10">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm">eThekwini Support AI</h3>
+                    <p class="text-xs text-sky-100">Powered by Gemini 3 Flash</p>
+                </div>
+            </div>
+            <button onclick="toggleChat()" class="text-white hover:text-sky-200 transition-colors p-1 cursor-pointer">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="chatMessages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-4 h-[350px]">
+            <div class="flex gap-2 items-start">
+                <div class="bg-slate-200 rounded-full p-2 h-8 w-8 flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                    <i class="fa-solid fa-robot text-slate-600 text-xs"></i>
+                </div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-200 leading-relaxed">
+                    Hello! I'm the eThekwini Municipal Gemini AI assistant. How can I help you with your rates or account today?
+                </div>
+            </div>
+        </div>
+        <div class="p-3 border-t border-slate-200 bg-white flex gap-2 items-center">
+            <input type="text" id="chatInput" onkeydown="handleChatKey(event)" placeholder="Ask Gemini AI..." class="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow bg-slate-50 focus:bg-white">
+            <button onclick="sendChatMessage()" class="bg-primary hover:bg-primaryHover text-white rounded-xl px-4 py-2.5 transition-colors flex items-center justify-center shadow-sm cursor-pointer">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const overlay = document.getElementById('greetingOverlay');
+                if (overlay) {
+                    overlay.classList.add('opacity-0');
+                    setTimeout(() => { overlay.remove(); }, 500);
+                }
+            }, 1200);
+        });
+
+        const mockAccounts = {
+            "default": {
+                name: "Thabo Mbeki",
+                address: "45 Baobab Avenue, Morningside, Durban, 4001",
+                valuation: "R 1,850,000",
+                balance: 2420.50,
+                dueDate: "31 Oct 2026",
+                lastPayment: 2100.00,
+                lastPaymentDate: "28 Sep 2026",
+                history: [
+                    { date: "31 Oct 2026", desc: "Monthly Rates & Taxes - October", amount: 2420.50, type: "charge", status: "Unpaid" },
+                    { date: "30 Sep 2026", desc: "Monthly Rates & Taxes - September", amount: 2100.00, type: "payment", status: "Cleared" },
+                    { date: "31 Aug 2026", desc: "Monthly Rates & Taxes - August", amount: 2050.00, type: "payment", status: "Cleared" }
+                ],
+                inbox: [
+                    { id: 1, title: "Rates Arrears Debt Relief Incentive", date: "14 Oct 2026", body: "eThekwini Municipality is offering a 50% interest write-off on all long-standing arrears if settled in full before November 30, 2026.", read: false },
+                    { id: 2, title: "Gemini AI Monthly Arrears Notice", date: "18 Oct 2026", body: "Dear resident, the AI Payment Tracker agent detected an outstanding balance of R 2,420.50 for October.", read: false }
+                ]
+            }
+        };
+
+        let currentBalance = 0;
+        let loggedInResident = null;
+        let currentAdmin = null;
+
+        const adminAccounts = [
+            { acc: "849302810", name: "Thabo Mbeki", balance: 2420.50, status: "30 Days", monthlyRates: [
+                { month: "October 2026", amount: 2420.50, paid: false },
+                { month: "September 2026", amount: 2100.00, paid: true },
+                { month: "August 2026", amount: 2050.00, paid: true }
+            ]},
+            { acc: "192837465", name: "Sarah Connor", balance: 4500.00, status: "90+ Days", monthlyRates: [
+                { month: "October 2026", amount: 4500.00, paid: false },
+                { month: "September 2026", amount: 4300.00, paid: true }
+            ]},
+            { acc: "564738291", name: "Priya Patel", balance: 0.00, status: "Paid Up", monthlyRates: [
+                { month: "October 2026", amount: 4500.25, paid: true },
+                { month: "September 2026", amount: 4400.00, paid: true }
+            ]}
+        ];
+
+        // Function to call Gemini API
+        async function callGeminiAPI(promptText) {
+            const systemPrompt = "Act as an expert eThekwini Municipal Rates Advisor. Provide concise, helpful, and professional answers regarding property valuations, municipal billing, rates disputes, and payment arrangements.";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    return candidate.content.parts[0].text;
+                }
+                return "I am unable to retrieve an AI response at the moment. Please contact the eThekwini Municipality helpline.";
+            } catch (err) {
+                console.error("Gemini API Error:", err);
+                return "Error connecting to Gemini AI. Please try again later.";
+            }
+        }
+
+        async function handleGlobalSearch(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const query = document.getElementById('globalAiSearch').value.trim();
+                if (!query) return;
+                toggleChat();
+                await sendPromptToChat(query);
+                document.getElementById('globalAiSearch').value = '';
+            }
+        }
+
+        async function sendPromptToChat(prompt) {
+            const chatMessages = document.getElementById('chatMessages');
+            const userDiv = document.createElement('div');
+            userDiv.className = "flex gap-2 items-start justify-end";
+            userDiv.innerHTML = `
+                <div class="bg-primary text-white p-3 rounded-2xl rounded-tr-none shadow-sm text-sm max-w-[80%] leading-relaxed">
+                    ${prompt}
+                </div>
+            `;
+            chatMessages.appendChild(userDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const aiDiv = document.createElement('div');
+            aiDiv.className = "flex gap-2 items-start";
+            aiDiv.id = "tempAiLoading";
+            aiDiv.innerHTML = `
+                <div class="bg-slate-200 rounded-full p-2 h-8 w-8 flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                    <i class="fa-solid fa-robot text-slate-600 text-xs"></i>
+                </div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-500 border border-slate-200 leading-relaxed flex items-center gap-2">
+                    <div class="loader" style="width:16px;height:16px;border-width:2px;"></div> Gemini AI is thinking...
+                </div>
+            `;
+            chatMessages.appendChild(aiDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const aiResponseText = await callGeminiAPI(prompt);
+            document.getElementById('tempAiLoading').remove();
+
+            const finalAiDiv = document.createElement('div');
+            finalAiDiv.className = "flex gap-2 items-start";
+            finalAiDiv.innerHTML = `
+                <div class="bg-slate-200 rounded-full p-2 h-8 w-8 flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                    <i class="fa-solid fa-robot text-slate-600 text-xs"></i>
+                </div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-200 leading-relaxed max-w-[80%]">
+                    ${aiResponseText}
+                </div>
+            `;
+            chatMessages.appendChild(finalAiDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function handleChatKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await sendPromptToChat(text);
+        }
+
+        function openAdminModal() {
+            const modal = document.getElementById('adminModal');
+            const content = document.getElementById('adminModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeAdminModal() {
+            const modal = document.getElementById('adminModal');
+            const content = document.getElementById('adminModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('aiSecurityLog').classList.add('hidden');
+                document.getElementById('adminLoginError').classList.add('hidden');
+                document.getElementById('adminLoginForm').reset();
+            }, 300);
+        }
+
+        function openResidentAuthModal() {
+            const modal = document.getElementById('residentAuthModal');
+            const content = document.getElementById('residentAuthModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeResidentAuthModal() {
+            const modal = document.getElementById('residentAuthModal');
+            const content = document.getElementById('residentAuthModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function toggleAuthMode(mode) {
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+            const formLogin = document.getElementById('residentLoginForm');
+            const formRegister = document.getElementById('residentRegisterForm');
+
+            if (mode === 'login') {
+                tabLogin.className = "flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary bg-sky-50/50 transition-colors cursor-pointer";
+                tabRegister.className = "flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 transition-colors cursor-pointer";
+                formLogin.classList.remove('hidden');
+                formLogin.classList.add('flex');
+                formRegister.classList.add('hidden');
+                formRegister.classList.remove('flex');
+            } else {
+                tabRegister.className = "flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary bg-sky-50/50 transition-colors cursor-pointer";
+                tabLogin.className = "flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 transition-colors cursor-pointer";
+                formRegister.classList.remove('hidden');
+                formRegister.classList.add('flex');
+                formLogin.classList.add('hidden');
+                formLogin.classList.remove('flex');
+            }
+        }
+
+        function runBotCheck(type) {
+            const box = document.getElementById(type === 'login' ? 'loginBotBox' : 'regBotBox');
+            const input = document.getElementById(type === 'login' ? 'loginBotPassed' : 'regBotPassed');
+            box.innerHTML = '<i class="fa-solid fa-check text-emerald-600 font-bold"></i>';
+            box.style.borderColor = '#059669';
+            input.value = 'true';
+        }
+
+        function processResidentLogin() {
+            const idNum = document.getElementById('loginIdNum').value.trim();
+            const botPassed = document.getElementById('loginBotPassed').value;
+            if (botPassed !== 'true') {
+                alert('Please verify you are human by clicking the bot check box.');
+                return;
+            }
+            loggedInResident = { idNum: idNum, name: "Thabo Mbeki" };
+            closeResidentAuthModal();
+            document.getElementById('userNameDisplay').textContent = "Thabo Mbeki";
+            document.getElementById('inboxNavBtn').classList.remove('hidden');
+            document.getElementById('searchQuery').value = idNum;
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        }
+
+        function processResidentRegister() {
+            const name = document.getElementById('regFullName').value.trim();
+            const idNum = document.getElementById('regIdNum').value.trim();
+            const streetNum = document.getElementById('regStreetNum').value.trim();
+            const streetName = document.getElementById('regStreetName').value.trim();
+            const suburb = document.getElementById('regSuburb').value.trim();
+            const botPassed = document.getElementById('regBotPassed').value;
+
+            if (botPassed !== 'true') {
+                alert('Please verify you are human before registering.');
+                return;
+            }
+
+            mockAccounts[idNum] = {
+                name: name,
+                address: `${streetNum} ${streetName}, ${suburb}`,
+                valuation: "R 1,500,000",
+                balance: 1950.00,
+                dueDate: "31 Oct 2026",
+                lastPayment: 0.00,
+                lastPaymentDate: "N/A",
+                history: [
+                    { date: "31 Oct 2026", desc: "Monthly Rates & Taxes - October", amount: 1950.00, type: "charge", status: "Unpaid" }
+                ],
+                inbox: [
+                    { id: 1, title: "Welcome to eThekwini Municipality", date: "Today", body: "Your resident profile has been created successfully.", read: false }
+                ]
+            };
+
+            loggedInResident = { idNum: idNum, name: name };
+            closeResidentAuthModal();
+            document.getElementById('userNameDisplay').textContent = name;
+            document.getElementById('inboxNavBtn').classList.remove('hidden');
+            document.getElementById('searchQuery').value = idNum;
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        }
+
+        function openInboxModal() {
+            const modal = document.getElementById('inboxModal');
+            const content = document.getElementById('inboxModalContent');
+            const container = document.getElementById('inboxMessagesContainer');
+            container.innerHTML = '';
+
+            const currentAcc = loggedInResident ? mockAccounts[loggedInResident.idNum] || mockAccounts["default"] : mockAccounts["default"];
+            currentAcc.inbox.forEach(msg => {
+                msg.read = true;
+                const div = document.createElement('div');
+                div.className = "bg-slate-50 p-4 rounded-xl border border-slate-200";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <h4 class="font-bold text-slate-800 text-sm">${msg.title}</h4>
+                        <span class="text-xs text-slate-400">${msg.date}</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed">${msg.body}</p>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('inboxBadge').classList.add('hidden');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeInboxModal() {
+            const modal = document.getElementById('inboxModal');
+            const content = document.getElementById('inboxModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function goHome() {
+            loggedInResident = null;
+            currentAdmin = null;
+            document.getElementById('headerSection').classList.remove('hidden');
+            document.getElementById('searchSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('flex');
+            document.getElementById('adminDashboardSection').classList.add('hidden');
+            document.getElementById('adminDashboardSection').classList.remove('flex');
+            document.getElementById('adminAuthBlock').classList.remove('hidden');
+            document.getElementById('adminAuthBlock').classList.add('flex');
+            document.getElementById('adminLoggedInBlock').classList.add('hidden');
+            document.getElementById('adminLoggedInBlock').classList.remove('flex');
+            document.getElementById('inboxNavBtn').classList.add('hidden');
+            document.getElementById('userNameDisplay').textContent = "Resident Login";
+            document.getElementById('searchForm').reset();
+        }
+
+        function resetSearch() { goHome(); }
+
+        function openPaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            const content = document.getElementById('paymentModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closePaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            const content = document.getElementById('paymentModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function processMockPayment() {
+            closePaymentModal();
+            const sModal = document.getElementById('successModal');
+            const sContent = document.getElementById('successModalContent');
+            sModal.classList.remove('hidden');
+            setTimeout(() => {
+                sModal.classList.remove('opacity-0');
+                sContent.classList.remove('scale-95');
+                sContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeSuccessModal() {
+            const sModal = document.getElementById('successModal');
+            const sContent = document.getElementById('successModalContent');
+            sModal.classList.add('opacity-0');
+            sContent.classList.remove('scale-100');
+            sContent.classList.add('scale-95');
+            setTimeout(() => {
+                sModal.classList.add('hidden');
+                currentBalance = 0;
+                document.getElementById('dashBalance').textContent = "R 0.00";
+            }, 300);
+        }
+
+        function generateReceiptPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFillColor(236, 253, 245);
+            doc.rect(0, 0, 210, 297, "F");
+            doc.setTextColor(5, 150, 105);
+            doc.setFontSize(32);
+            doc.setFont("helvetica", "bold");
+            doc.text("CONGRATULATIONS!", 105, 70, { align: "center" });
+            doc.setFontSize(50);
+            doc.text("☺", 105, 100, { align: "center" });
+            doc.setFontSize(16);
+            doc.setTextColor(30, 41, 59);
+            doc.text("eThekwini Municipality Official Payment Receipt", 105, 130, { align: "center" });
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Amount Paid: R 2,100.00`, 105, 150, { align: "center" });
+            doc.text(`Remaining Balance: R 0.00`, 105, 160, { align: "center" });
+            doc.text(`Status: Fully Cleared`, 105, 170, { align: "center" });
+            doc.save("Municipal_Payment_Receipt.pdf");
+        }
+
+        function generateInvoicePDF(date, desc, amount, status) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("eThekwini Municipality", 105, 25, { align: "center" });
+            doc.setFontSize(13);
+            doc.setFont("helvetica", "normal");
+            doc.text("Official Municipal Statement & Notice", 105, 33, { align: "center" });
+            doc.line(20, 42, 190, 42);
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Billing & Payment Details", 20, 52);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Billing Month / Date: ${date}`, 20, 62);
+            doc.text(`Description: ${desc}`, 20, 72);
+            doc.text(`Amount: R ${amount.toFixed(2)}`, 20, 82);
+            doc.text(`Status: ${status}`, 20, 92);
+            doc.line(20, 102, 190, 102);
+            doc.setFontSize(10);
+            doc.text("This document serves as an official billing extract from the eThekwini Municipality database.", 20, 115);
+            doc.save(`Municipal_Invoice_${date.replace(/\s+/g, '_')}.pdf`);
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('searchQuery').value.trim();
+            if(!query) return;
+
+            document.getElementById('searchSection').classList.add('hidden');
+            document.getElementById('headerSection').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('flex');
+
+            setTimeout(() => {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('loadingState').classList.remove('flex');
+                populateDashboard(query);
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('flex');
+            }, 1200);
+        });
+
+        function populateDashboard(accountQuery) {
+            const data = mockAccounts[accountQuery] || mockAccounts["default"];
+            const formatCurrency = (num) => 'R ' + num.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            currentBalance = data.balance;
+
+            document.getElementById('dashName').textContent = `Account Owner: ${data.name}`;
+            document.getElementById('dashAccNo').textContent = accountQuery.length > 5 ? accountQuery : '849302810';
+            document.getElementById('dashBalance').textContent = formatCurrency(data.balance);
+            document.getElementById('dashDueDate').textContent = data.dueDate;
+            document.getElementById('dashLastPayment').textContent = formatCurrency(data.lastPayment);
+            document.getElementById('dashLastPaymentDate').textContent = data.lastPaymentDate;
+            document.getElementById('dashAddress').textContent = data.address;
+            document.getElementById('dashValuation').textContent = data.valuation;
+            document.getElementById('modalAmount').textContent = formatCurrency(data.balance);
+
+            const outstandingTbody = document.getElementById('outstandingBillingTableBody');
+            const clearedTbody = document.getElementById('clearedBillingTableBody');
+            outstandingTbody.innerHTML = '';
+            clearedTbody.innerHTML = '';
+            
+            data.history.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                const amountClass = item.status === 'Unpaid' ? 'text-rose-600' : 'text-emerald-600';
+                let statusBadge = item.status === 'Unpaid' 
+                    ? '<span class="bg-rose-100 text-rose-700 py-1 px-2.5 rounded-full text-xs font-semibold">Unpaid</span>' 
+                    : '<span class="bg-emerald-100 text-emerald-700 py-1 px-2.5 rounded-full text-xs font-semibold">Cleared</span>';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-600 font-medium">${item.date}</td>
+                    <td class="px-6 py-4 text-slate-800 font-medium">${item.desc}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-semibold ${amountClass}">R ${item.amount.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <button onclick="generateInvoicePDF('${item.date}', '${item.desc}', ${item.amount}, '${item.status}')" class="text-slate-400 hover:text-primary transition-colors cursor-pointer" title="Download Document">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
+                    </td>
+                `;
+                if (item.status === 'Unpaid') outstandingTbody.appendChild(tr);
+                else clearedTbody.appendChild(tr);
+            });
+        }
+
+        function processAdminLogin() {
+            const user = document.getElementById('adminUsername').value.trim().toLowerCase();
+            const pass = document.getElementById('adminPassword').value;
+            const errorEl = document.getElementById('adminLoginError');
+            const logEl = document.getElementById('aiSecurityLog');
+
+            if (user === 'sonke' || user === 'londi' || user === 'sizwe') {
+                errorEl.classList.add('hidden');
+                logEl.classList.remove('hidden');
+                setTimeout(() => { document.getElementById('secStep1').style.opacity = '1'; }, 300);
+                setTimeout(() => { document.getElementById('secStep2').style.opacity = '1'; }, 700);
+                setTimeout(() => { document.getElementById('secStep3').style.opacity = '1'; }, 1100);
+                setTimeout(() => { document.getElementById('secStep4').style.opacity = '1'; }, 1500);
+
+                setTimeout(() => {
+                    currentAdmin = user;
+                    closeAdminModal();
+                    showAdminDashboard();
+                }, 2200);
+            } else {
+                errorEl.classList.remove('hidden');
+                logEl.classList.add('hidden');
+            }
+        }
+
+        function logoutAdmin() { goHome(); }
+
+        function showAdminDashboard() {
+            document.getElementById('headerSection').classList.add('hidden');
+            document.getElementById('searchSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('flex');
+            
+            const adminSec = document.getElementById('adminDashboardSection');
+            adminSec.classList.remove('hidden');
+            adminSec.classList.add('flex');
+            
+            document.getElementById('adminAuthBlock').classList.add('hidden');
+            document.getElementById('adminAuthBlock').classList.remove('flex');
+            
+            const loggedInBlock = document.getElementById('adminLoggedInBlock');
+            loggedInBlock.classList.remove('hidden');
+            loggedInBlock.classList.add('flex');
+            
+            document.getElementById('loggedInAdminName').textContent = currentAdmin;
+            const roleBadge = document.getElementById('loggedInAdminRole');
+            const dashTitle = document.getElementById('adminDashboardTitle');
+            
+            if (currentAdmin === 'sonke') {
+                roleBadge.textContent = 'Admin';
+                roleBadge.className = 'text-[10px] uppercase tracking-wider font-bold text-white bg-rose-500 px-2 py-0.5 rounded-full shadow-sm';
+                dashTitle.innerHTML = '<i class="fa-solid fa-shield-halved text-rose-500 mr-2"></i>Master Admin Dashboard (Sonke)';
+            } else {
+                roleBadge.textContent = 'Staff';
+                roleBadge.className = 'text-[10px] uppercase tracking-wider font-bold text-white bg-amber-500 px-2 py-0.5 rounded-full shadow-sm';
+                dashTitle.innerHTML = `<i class="fa-solid fa-user-shield text-amber-500 mr-2"></i>Staff Dashboard (${currentAdmin.charAt(0).toUpperCase() + currentAdmin.slice(1)})`;
+            }
+            populateAdminTable();
+        }
+
+        function populateAdminTable(searchQuery = '') {
+            const formatCurrency = (num) => 'R ' + num.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            let totalDebt = 0;
+            let totalMonthsDue = 0;
+            let totalMonthsPaid = 0;
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+            let arrearCount = 0;
+
+            const query = searchQuery.toLowerCase().trim();
+            const filteredAccounts = adminAccounts.filter(item => 
+                item.name.toLowerCase().includes(query) || item.acc.toLowerCase().includes(query)
+            );
+
+            filteredAccounts.forEach(item => {
+                totalDebt += item.balance;
+                if (item.balance > 0) arrearCount++;
+
+                item.monthlyRates.forEach(mr => {
+                    totalMonthsDue++;
+                    if (mr.paid) totalMonthsPaid++;
+                });
+                
+                let statusBadgeClass = 'bg-amber-100 text-amber-700';
+                if (item.balance === 0 || item.status === 'Paid Up') {
+                    statusBadgeClass = 'bg-emerald-100 text-emerald-700 font-bold';
+                }
+
+                let actionsHtml = `<button onclick="openEditAccountModal('${item.acc}')" class="text-xs bg-sky-100 hover:bg-sky-200 text-sky-800 py-1 px-2.5 rounded shadow-sm font-semibold cursor-pointer"><i class="fa-solid fa-pen"></i> Edit</button>`;
+                
+                if (currentAdmin === 'sonke' && item.balance > 0) {
+                    actionsHtml += ` <button onclick="clearResidentAccount('${item.acc}')" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-1 px-2.5 rounded shadow-sm font-semibold cursor-pointer"><i class="fa-solid fa-check"></i> Clear Account</button>`;
+                }
+
+                item.monthlyRates.forEach((mr, idx) => {
+                    if (mr.paid) {
+                        actionsHtml += ` <button onclick="openPaidUpModal('${item.acc}', ${idx})" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-1.5 px-2.5 rounded shadow-sm font-semibold cursor-pointer"><i class="fa-solid fa-file-signature"></i> ${mr.month}</button>`;
+                    }
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-600 font-medium">${item.acc}</td>
+                    <td class="px-6 py-4 text-slate-800 font-semibold">${item.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-bold ${item.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}">${formatCurrency(item.balance)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="${statusBadgeClass} py-1 px-2.5 rounded-full text-xs font-semibold">${item.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center flex items-center justify-center gap-1.5 flex-wrap">
+                        ${actionsHtml}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('adminTotalDebt').textContent = formatCurrency(totalDebt);
+            document.getElementById('adminPaymentsRatio').textContent = `${totalMonthsPaid} / ${totalMonthsDue}`;
+            document.getElementById('adminTotalAccounts').textContent = arrearCount;
+        }
+
+        function filterAdminTable() {
+            const query = document.getElementById('adminAccountSearchInput').value;
+            populateAdminTable(query);
+        }
+
+        function clearResidentAccount(accNo) {
+            if (currentAdmin !== 'sonke') return;
+            const acc = adminAccounts.find(a => a.acc === accNo);
+            if (acc) {
+                acc.balance = 0.00;
+                acc.status = "Paid Up";
+                acc.monthlyRates.forEach(mr => mr.paid = true);
+                populateAdminTable();
+            }
+        }
+
+        function openEditAccountModal(accNo) {
+            const acc = adminAccounts.find(a => a.acc === accNo);
+            if (!acc) return;
+
+            document.getElementById('editAccNo').value = acc.acc;
+            document.getElementById('editAccName').value = acc.name;
+            
+            const container = document.getElementById('editMonthlyRatesContainer');
+            container.innerHTML = '';
+            
+            acc.monthlyRates.forEach((mr, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200";
+                div.innerHTML = `
+                    <span class="text-sm font-medium text-slate-700">${mr.month}</span>
+                    <div class="flex items-center gap-3">
+                        <input type="number" step="0.01" id="editRateAmt_${idx}" value="${mr.amount}" class="w-28 px-3 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                        <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 cursor-pointer">
+                            <input type="checkbox" id="editRatePaid_${idx}" ${mr.paid ? 'checked' : ''} class="w-4 h-4 text-emerald-600 rounded"> Paid
+                        </label>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            const modal = document.getElementById('editAccountModal');
+            const content = document.getElementById('editAccountModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeEditAccountModal() {
+            const modal = document.getElementById('editAccountModal');
+            const content = document.getElementById('editAccountModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function saveAccountEdits() {
+            const accNo = document.getElementById('editAccNo').value;
+            const name = document.getElementById('editAccName').value;
+            const acc = adminAccounts.find(a => a.acc === accNo);
+            
+            if (acc) {
+                acc.name = name;
+                let totalBal = 0;
+                acc.monthlyRates.forEach((mr, idx) => {
+                    const amt = parseFloat(document.getElementById(`editRateAmt_${idx}`).value) || 0;
+                    const paid = document.getElementById(`editRatePaid_${idx}`).checked;
+                    mr.amount = amt;
+                    mr.paid = paid;
+                    if (!paid) totalBal += amt;
+                });
+                acc.balance = totalBal;
+                acc.status = totalBal === 0 ? "Paid Up" : "Arrears";
+            }
+            closeEditAccountModal();
+            populateAdminTable();
+        }
+
+        function runAiScanModal() {
+            const modal = document.getElementById('aiScanModal');
+            const content = document.getElementById('aiScanModalContent');
+            const loader = document.getElementById('aiScanLoader');
+            const results = document.getElementById('aiScanResults');
+
+            loader.classList.remove('hidden');
+            results.classList.add('hidden');
+            loader.classList.add('flex');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                results.classList.remove('hidden');
+                results.classList.add('flex');
+            }, 2000);
+        }
+
+        function closeAiScanModal() {
+            const modal = document.getElementById('aiScanModal');
+            const content = document.getElementById('aiScanModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function openPaidUpModal(accNo, monthIndex) {
+            const modal = document.getElementById('paidUpModal');
+            const content = document.getElementById('paidUpModalContent');
+            
+            document.getElementById('paidUpAccNo').value = accNo;
+            document.getElementById('paidUpMonthIndex').value = monthIndex;
+            
+            const account = adminAccounts.find(a => a.acc === accNo);
+            const monthData = account ? account.monthlyRates[monthIndex] : { month: "Selected Month", amount: 0 };
+
+            document.getElementById('paidUpModalSubtitle').textContent = `Generating clearance for ${monthData.month}.`;
+            document.getElementById('paidUpMessage').value = `This official document certifies that the municipal rates account for ${account ? account.name : 'the ratepayer'} (Account Number: ${accNo}) for the billing month of ${monthData.month} is fully paid up.\n\nThank you for your prompt payments to eThekwini Municipality.`;
+
+            const stampBox = document.getElementById('stampControlBox');
+            const staffBox = document.getElementById('staffWarningBox');
+            const checkbox = document.getElementById('applyStampCheckbox');
+
+            if (currentAdmin === 'sonke') {
+                stampBox.classList.remove('hidden');
+                staffBox.classList.add('hidden');
+                checkbox.checked = false;
+            } else {
+                stampBox.classList.add('hidden');
+                staffBox.classList.remove('hidden');
+                checkbox.checked = false;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closePaidUpModal() {
+            const modal = document.getElementById('paidUpModal');
+            const content = document.getElementById('paidUpModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function downloadPaidUpPDF() {
+            const accNo = document.getElementById('paidUpAccNo').value;
+            const monthIndex = parseInt(document.getElementById('paidUpMonthIndex').value);
+            const message = document.getElementById('paidUpMessage').value;
+            const applyStamp = currentAdmin === 'sonke' && document.getElementById('applyStampCheckbox').checked;
+
+            const account = adminAccounts.find(a => a.acc === accNo) || { name: "Unknown", monthlyRates: [] };
+            const monthData = account.monthlyRates[monthIndex] || { month: "Billing Month", amount: 0 };
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(24);
+            doc.setFont("helvetica", "bold");
+            doc.text("eThekwini Municipality", 105, 25, { align: "center" });
+            
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Monthly Clearance Certificate (${monthData.month})`, 105, 35, { align: "center" });
+            doc.line(20, 45, 190, 45); 
+
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text("Account & Billing Details", 20, 55);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Account Holder: ${account.name}`, 20, 65);
+            doc.text(`Account Number: ${accNo}`, 20, 75);
+            doc.text(`Billing Month: ${monthData.month}`, 20, 85);
+            doc.text(`Amount Cleared: R ${monthData.amount.toFixed(2)}`, 20, 95);
+            doc.line(20, 105, 190, 105);
+
+            doc.setFontSize(11);
+            const splitText = doc.splitTextToSize(message, 170);
+            doc.text(splitText, 20, 120);
+
+            if (applyStamp && currentAdmin === 'sonke') {
+                doc.setDrawColor(220, 38, 38); 
+                doc.setLineWidth(1.5);
+                doc.circle(150, 175, 25); 
+                doc.setLineWidth(0.5);
+                doc.circle(150, 175, 23);
+
+                doc.setTextColor(220, 38, 38);
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text("OFFICIALLY", 150, 167, { align: "center" });
+                doc.text("VERIFIED", 150, 177, { align: "center" });
+                doc.text("Sonke (Admin)", 150, 187, { align: "center" });
+                
+                doc.setTextColor(0, 0, 120);
+                doc.setFont("times", "italic");
+                doc.setFontSize(16);
+                doc.text("Sonke", 150, 215, { align: "center" });
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text("System Administrator Approval", 150, 223, { align: "center" });
+            } else {
+                 doc.setTextColor(200, 200, 200);
+                 doc.setFontSize(40);
+                 doc.text("DRAFT COPY", 105, 170, { angle: 45, align: "center" });
+            }
+
+            doc.save(`Monthly_Clearance_${accNo}_${monthData.month.replace(/\s+/g, '_')}.pdf`);
+            closePaidUpModal();
+        }
+
+        function toggleChat() {
+            const win = document.getElementById('aiChatWindow');
+            if (win.classList.contains('hidden')) {
+                win.classList.remove('hidden');
+                win.classList.remove('scale-0', 'opacity-0');
+                win.classList.add('scale-100', 'opacity-100');
+            } else {
+                win.classList.remove('scale-100', 'opacity-100');
+                win.classList.add('scale-0', 'opacity-0');
+                setTimeout(() => { win.classList.add('hidden'); }, 300);
+            }
+        }
+
+        async function askAIAssistant(topic) {
+            toggleChat();
+            let prompt = "";
+            if (topic === 'valuation') {
+                prompt = "Can you explain how my municipal property valuation was calculated in eThekwini and how I can dispute it if necessary?";
+            } else if (topic === 'billing') {
+                prompt = "Could you analyze my recent municipal billing history and summarize my account status?";
+            }
+            if (prompt) {
+                await sendPromptToChat(prompt);
+            }
+        }
+    </script>
+</body>
+</html>

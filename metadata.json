@@ -1,0 +1,6 @@
+{
+  "name": "eThekwini Municipal Rates Portal",
+  "description": "Comprehensive eThekwini Municipal Rates & Taxes Portal with resident self-service, official Section 118 & monthly clearance certificates, valuation objections, instant payments, and AI arrears intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
