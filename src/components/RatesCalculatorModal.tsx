@@ -15,14 +15,14 @@ export const RatesCalculatorModal: React.FC<RatesCalculatorModalProps> = ({ isOp
 
   if (!isOpen) return null;
 
-  // Ugu rates tariff rules
+  // uMhlathuze rates tariff rules
   let tariff = 0.0125; // 1.25 cents in Rand for residential
   if (propertyCategory === 'commercial') tariff = 0.025;
   if (propertyCategory === 'vacant') tariff = 0.035;
 
   let deduction = 0;
   if ((propertyCategory === 'residential' || propertyCategory === 'sectional') && isPrimaryResidence) {
-    deduction = 350000; // Ugu primary residential rebate
+    deduction = 350000; // uMhlathuze primary residential rebate
   }
 
   const rateableValue = Math.max(0, marketValue - deduction);
@@ -51,7 +51,7 @@ export const RatesCalculatorModal: React.FC<RatesCalculatorModalProps> = ({ isOp
               <Calculator className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-white text-lg">Ugu District Rates Calculator</h3>
+              <h3 className="font-extrabold text-white text-lg">uMhlathuze Municipal Rates Calculator</h3>
               <p className="text-xs text-slate-400">Tariff Formulas & Statutory Rebates (2026/2027)</p>
             </div>
           </div>

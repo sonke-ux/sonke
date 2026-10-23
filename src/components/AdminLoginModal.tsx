@@ -10,11 +10,22 @@ interface AdminLoginModalProps {
 }
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [username, setUsername] = useState('sonke');
-  const [password, setPassword] = useState('admin2026');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [error, setError] = useState('');
+
+  // Ensure fields are completely blank each time staff portal gateway is opened
+  React.useEffect(() => {
+    if (isOpen) {
+      setUsername('');
+      setPassword('');
+      setError('');
+      setIsVerifying(false);
+      setCurrentStep(0);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -60,7 +71,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             </div>
             <div>
               <h3 className="font-extrabold text-white text-lg">Staff & Admin Gateway</h3>
-              <p className="text-xs text-slate-400">Ugu District Revenue Management Security</p>
+              <p className="text-xs text-slate-400">City of uMhlathuze Revenue Management Security</p>
             </div>
           </div>
           <button

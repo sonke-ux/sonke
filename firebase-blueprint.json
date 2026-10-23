@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "RatepayerAccount": {
+      "title": "RatepayerAccount",
+      "description": "Municipal property rates and water account for Ugu District Municipality",
+      "type": "object",
+      "properties": {
+        "accNo": { "type": "string" },
+        "saIdNumber": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "suburb": { "type": "string" },
+        "propertyCategory": { "type": "string" },
+        "marketValuation": { "type": "number" },
+        "exemptionRebate": { "type": "number" },
+        "balance": { "type": "number" },
+        "dueDate": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["accNo", "name", "balance", "marketValuation"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access for residents and staff",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string" },
+        "readMessages": { "type": "array" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/accounts/{accNo}": {
+      "schema": "RatepayerAccount",
+      "description": "Collection of municipal property rating accounts"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of authenticated resident and staff profiles"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Test collection for connection checking
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Property accounts collection
+    match /accounts/{accNo} {
+      // Rates portal allows public property lookup by account number
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // User profiles collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

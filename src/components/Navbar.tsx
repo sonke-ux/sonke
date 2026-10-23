@@ -52,9 +52,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-xl tracking-tight text-white">Muni<span className="text-sky-400">Rates</span></span>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded">Ugu</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded">uMhlathuze</span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">District Municipality • Rates & Water</p>
+              <p className="text-[11px] text-slate-400 hidden sm:block">City of uMhlathuze • Rates & Water</p>
             </div>
           </button>
 
@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenInbox}
               className="relative p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700 cursor-pointer"
-              title="Official Municipal Notices & Reminders"
+              title={unreadCount > 0 ? `${unreadCount} unread notices • Click to view` : 'Official Municipal Inbox (All Read • Pin Cleared)'}
             >
               <Inbox className="w-5 h-5" />
               {unreadCount > 0 && (

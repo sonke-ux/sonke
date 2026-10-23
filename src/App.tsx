@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { INITIAL_ACCOUNTS, ADMIN_USERS } from './data/mockData';
-import { RatepayerAccount, AdminUser, MonthlyRate } from './types';
+import { INITIAL_ACCOUNTS, ADMIN_USERS, INITIAL_ADMIN_NOTIFICATIONS } from './data/mockData';
+import { RatepayerAccount, AdminUser, MonthlyRate, AdminNotification } from './types';
 import { Navbar } from './components/Navbar';
 import { SearchHero } from './components/SearchHero';
 import { ResidentDashboard } from './components/ResidentDashboard';
@@ -26,6 +26,7 @@ export default function App() {
   // Auth states
   const [loggedInResident, setLoggedInResident] = useState<RatepayerAccount | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
+  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>(INITIAL_ADMIN_NOTIFICATIONS);
 
   // Modals
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -63,10 +64,10 @@ export default function App() {
         accNo: query.length === 9 ? query : '849302810',
         saIdNumber: query.length === 13 ? query : '9001015000081',
         name: 'Resident Ratepayer',
-        email: 'resident@ugu.gov.za',
+        email: 'resident@umhlathuze.gov.za',
         phone: '+27 82 123 4567',
-        address: '45 Marine Drive',
-        suburb: 'Shelly Beach, Port Shepstone, 4265',
+        address: '45 Pelikaan Parade',
+        suburb: 'Meerensee, Richards Bay, 3901',
         propertyCategory: 'Residential',
         marketValuation: 1850000,
         exemptionRebate: 350000,
@@ -102,7 +103,7 @@ export default function App() {
         inbox: [
           {
             id: 'msg-gen-1',
-            title: 'Welcome to Ugu District Rates Portal',
+            title: 'Welcome to uMhlathuze Municipal Rates Portal',
             date: 'Today',
             body: 'Account successfully located in the municipal billing ledger.',
             read: false,
@@ -144,7 +145,7 @@ export default function App() {
       email: `${(newProfile.name || 'resident').toLowerCase().replace(/\s+/g, '.')}@example.co.za`,
       phone: '+27 82 555 1234',
       address: newProfile.address || '10 Coast Road',
-      suburb: newProfile.suburb || 'Morningside, Durban',
+      suburb: newProfile.suburb || 'Meerensee, Richards Bay',
       propertyCategory: 'Residential',
       marketValuation: 1650000,
       exemptionRebate: 350000,
@@ -314,30 +315,185 @@ export default function App() {
     );
   };
 
-  // Inbox counts
+  // Inbox counts: if admin logged in, show admin unread notifications; otherwise resident/account unread
   const currentInboxMessages = activeAccount ? activeAccount.inbox : accounts[0]?.inbox || [];
-  const unreadCount = currentInboxMessages.filter((m) => !m.read).length;
+  const residentUnreadCount = currentInboxMessages.filter((m) => !m.read).length;
+  const adminUnreadCount = adminNotifications.filter((n) => !n.read).length;
+  const unreadCount = currentAdmin ? adminUnreadCount : residentUnreadCount;
 
   const handleMarkAllInboxRead = () => {
-    if (!activeAccount) return;
-    const readInbox = activeAccount.inbox.map((m) => ({ ...m, read: true }));
-    const updated = { ...activeAccount, inbox: readInbox };
-    setActiveAccount(updated);
-    setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    if (activeAccount) {
+      const readInbox = activeAccount.inbox.map((m) => ({ ...m, read: true }));
+      const updated = { ...activeAccount, inbox: readInbox };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: a.inbox.map((m) => ({ ...m, read: true })),
+        }))
+      );
+    }
   };
 
   const handleMarkInboxRead = (id: string) => {
-    if (!activeAccount) return;
-    const readInbox = activeAccount.inbox.map((m) => (m.id === id ? { ...m, read: true } : m));
-    const updated = { ...activeAccount, inbox: readInbox };
-    setActiveAccount(updated);
-    setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    if (activeAccount) {
+      const readInbox = activeAccount.inbox.map((m) => (m.id === id ? { ...m, read: true } : m));
+      const updated = { ...activeAccount, inbox: readInbox };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: a.inbox.map((m) => (m.id === id ? { ...m, read: true } : m)),
+        }))
+      );
+    }
+  };
+
+  // Clear read messages from inbox
+  const handleClearReadMessages = () => {
+    if (activeAccount) {
+      const clearedInbox = activeAccount.inbox.filter((m) => !m.read);
+      const updated = { ...activeAccount, inbox: clearedInbox };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: a.inbox.filter((m) => !m.read),
+        }))
+      );
+    }
+  };
+
+  // Mark message as ready and clear from inbox once viewed
+  const handleViewAndClearMessage = (id: string) => {
+    if (activeAccount) {
+      const clearedInbox = activeAccount.inbox.filter((m) => m.id !== id);
+      const updated = { ...activeAccount, inbox: clearedInbox };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: a.inbox.filter((m) => m.id !== id),
+        }))
+      );
+    }
+  };
+
+  // Mark all messages as ready and clear inbox
+  const handleMarkAllReadyAndClear = () => {
+    if (activeAccount) {
+      const updated = { ...activeAccount, inbox: [] };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: [],
+        }))
+      );
+    }
+  };
+
+  // Restore sample demo messages for testing
+  const handleRestoreInboxMessages = () => {
+    const sampleInbox = [
+      {
+        id: `msg-rst-1`,
+        title: '2026 General Valuation Roll (GV2026) Published',
+        date: '15 Oct 2026',
+        body: 'Your municipal property valuation is open for public inspection. Objections close 30 Nov 2026.',
+        read: false,
+        ready: false,
+        tag: 'Notice' as const,
+      },
+      {
+        id: `msg-rst-2`,
+        title: 'uMhlathuze 100% Interest Amnesty Incentive',
+        date: '10 Oct 2026',
+        body: 'Settle historical rates balance in full or establish a debit order to receive immediate 100% interest write-off.',
+        read: false,
+        ready: false,
+        tag: 'Relief Incentive' as const,
+      },
+      {
+        id: `msg-rst-3`,
+        title: 'Payment Confirmation: Rates & Refuse Assessment',
+        date: '28 Sep 2026',
+        body: 'Receipt UMH-REC-008492 for R2,100.00 successfully allocated to account.',
+        read: false,
+        ready: false,
+        tag: 'Payment' as const,
+      },
+    ];
+
+    if (activeAccount) {
+      const updated = { ...activeAccount, inbox: sampleInbox };
+      setActiveAccount(updated);
+      setAccounts((prev) => prev.map((a) => (a.accNo === updated.accNo ? updated : a)));
+    } else {
+      setAccounts((prev) =>
+        prev.map((a) => ({
+          ...a,
+          inbox: sampleInbox,
+        }))
+      );
+    }
+  };
+
+  // Admin Notification handlers
+  const handleMarkAdminNotificationRead = (id: string) => {
+    setAdminNotifications((prev) =>
+      prev.map((n) =>
+        n.id === id
+          ? { ...n, read: true, ready: true, readBy: currentAdmin?.displayName || 'Admin' }
+          : n
+      )
+    );
+  };
+
+  const handleMarkAllAdminNotificationsRead = () => {
+    setAdminNotifications((prev) =>
+      prev.map((n) => ({
+        ...n,
+        read: true,
+        ready: true,
+        readBy: currentAdmin?.displayName || 'Admin',
+      }))
+    );
+  };
+
+  const handleClearReadAdminNotifications = () => {
+    setAdminNotifications((prev) => prev.filter((n) => !n.read));
+  };
+
+  // Mark admin notification as ready and clear from admin message bar once viewed
+  const handleViewAndClearAdminNotification = (id: string) => {
+    setAdminNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  // Mark all admin notifications as ready and clear admin message bar
+  const handleMarkAllAdminReadyAndClear = () => {
+    setAdminNotifications([]);
+  };
+
+  // Restore sample admin notifications for testing
+  const handleRestoreAdminNotifications = () => {
+    setAdminNotifications(INITIAL_ADMIN_NOTIFICATIONS);
   };
 
   // AI topics
   const handleAskAiTopic = (topic: string) => {
     if (topic === 'valuation') {
-      setAiChatInitialQuery('Can you explain how my municipal property valuation in Ugu District is calculated and how I can lodge a Section 49 objection if needed?');
+      setAiChatInitialQuery('Can you explain how my municipal property valuation in the City of uMhlathuze is calculated and how I can lodge a Section 49 objection if needed?');
     } else if (topic === 'billing') {
       setAiChatInitialQuery('Could you analyze my recent municipal billing history and summarize my account status?');
     }
@@ -394,6 +550,12 @@ export default function App() {
             onAskAi={handleAskAiTopic}
             onOpenDisputeModal={() => setIsDisputeOpen(true)}
             onOpenCalculator={() => setIsCalculatorOpen(true)}
+            onOpenInbox={() => setIsInboxOpen(true)}
+            onMarkAllInboxRead={handleMarkAllInboxRead}
+            onClearReadMessages={handleClearReadMessages}
+            onViewAndClearMessage={handleViewAndClearMessage}
+            onMarkAllReadyAndClear={handleMarkAllReadyAndClear}
+            onRestoreMessages={handleRestoreInboxMessages}
           />
         )}
 
@@ -401,6 +563,7 @@ export default function App() {
           <AdminDashboard
             currentAdmin={currentAdmin}
             accounts={accounts}
+            adminNotifications={adminNotifications}
             onLogout={() => {
               setCurrentAdmin(null);
               setCurrentView('search');
@@ -415,6 +578,12 @@ export default function App() {
               setClearanceMonth(month);
             }}
             onRunAiScan={() => setIsAiScanOpen(true)}
+            onMarkAdminNotificationRead={handleMarkAdminNotificationRead}
+            onMarkAllAdminNotificationsRead={handleMarkAllAdminNotificationsRead}
+            onClearReadAdminNotifications={handleClearReadAdminNotifications}
+            onViewAndClearAdminNotification={handleViewAndClearAdminNotification}
+            onMarkAllAdminReadyAndClear={handleMarkAllAdminReadyAndClear}
+            onRestoreAdminNotifications={handleRestoreAdminNotifications}
           />
         )}
       </main>
@@ -428,10 +597,10 @@ export default function App() {
                 <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold">
                   <Building2 className="w-4 h-4" />
                 </div>
-                <span className="font-extrabold text-white text-sm">Ugu District Municipality</span>
+                <span className="font-extrabold text-white text-sm">City of uMhlathuze</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Official Municipal Rates & Taxes Self-Service Portal. Port Shepstone, KwaZulu-Natal South Coast, South Africa.
+                Official Municipal Rates & Taxes Self-Service Portal. Richards Bay Civic Centre, KwaZulu-Natal, South Africa.
               </p>
               <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
                 <ShieldCheck className="w-4 h-4" /> MPRA & POPIA Fully Compliant
@@ -443,15 +612,15 @@ export default function App() {
               <ul className="space-y-2 text-[11px]">
                 <li className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Call Centre: <strong>039 688 5700 / 0800 33 10 11</strong></span>
+                  <span>Call Centre: <strong>035 907 5000 / 0800 22 28 27</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-sky-400" />
-                  <span>revenue.rates@ugu.gov.za</span>
+                  <span>rates@umhlathuze.gov.za</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Ugu Municipal Offices, Port Shepstone</span>
+                  <span>Civic Offices, 5 Mark Strasse, Richards Bay, 3900</span>
                 </li>
               </ul>
             </div>
@@ -462,7 +631,7 @@ export default function App() {
                 <li>• Municipal Property Rates Act (MPRA 6 of 2004)</li>
                 <li>• General Valuation Roll (GV2022 / GV2026)</li>
                 <li>• Section 118 Municipal Systems Act Clearance</li>
-                <li>• Ugu District Credit Control & Debt Relief Policy</li>
+                <li>• uMhlathuze Credit Control & Debt Relief Policy</li>
               </ul>
             </div>
 
@@ -482,7 +651,7 @@ export default function App() {
           </div>
 
           <div className="border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-slate-500">
-            <p>© 2026 Ugu District Municipality. All rights reserved.</p>
+            <p>© 2026 City of uMhlathuze. All rights reserved.</p>
             <p>Powered by Gemini 3.8 Flash AI Municipal Intelligence</p>
           </div>
         </div>
@@ -520,6 +689,10 @@ export default function App() {
         messages={currentInboxMessages}
         onMarkAllAsRead={handleMarkAllInboxRead}
         onMarkAsRead={handleMarkInboxRead}
+        onClearReadMessages={handleClearReadMessages}
+        onViewAndClearMessage={handleViewAndClearMessage}
+        onMarkAllReadyAndClear={handleMarkAllReadyAndClear}
+        onRestoreMessages={handleRestoreInboxMessages}
       />
 
       <AdminLoginModal

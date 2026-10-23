@@ -32,7 +32,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const handlePay = () => {
     if (amount <= 0) return;
     setIsProcessing(true);
-    setProcessingStep('Connecting to Ugu District Municipal Treasury gateway...');
+    setProcessingStep('Connecting to City of uMhlathuze Municipal Treasury gateway...');
 
     setTimeout(() => {
       setProcessingStep('Authorizing secure bank transaction & 3D Secure...');
@@ -45,7 +45,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setTimeout(() => {
       setIsProcessing(false);
       setIsSuccess(true);
-      const generatedReceipt = `UGU-REC-${Math.floor(100000 + Math.random() * 900000)}`;
+      const generatedReceipt = `UMH-REC-${Math.floor(100000 + Math.random() * 900000)}`;
       setReceiptNumber(generatedReceipt);
 
       // Trigger Confetti celebration
@@ -76,7 +76,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       account,
       amount,
       selectedMethod === 'card' ? 'Visa / Mastercard' : `Instant EFT (${selectedBank})`,
-      receiptNumber || 'UGU-REC-994123'
+      receiptNumber || 'UMH-REC-994123'
     );
   };
 
@@ -95,7 +95,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <div>
             <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-sky-400" />
-              <span>Ugu District Secure Rates Payment</span>
+              <span>City of uMhlathuze Secure Rates Payment</span>
             </h3>
             <p className="text-xs text-slate-400">Account #{account.accNo} • {account.name}</p>
           </div>
@@ -127,7 +127,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Payment Gateway:</span>
-                  <span className="text-slate-200">Ugu District Electronic Clearing System</span>
+                  <span className="text-slate-200">City of uMhlathuze Electronic Clearing System</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-700/60 pt-2">
                   <span className="text-slate-400">Ledger Status:</span>

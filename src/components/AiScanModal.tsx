@@ -32,7 +32,7 @@ export const AiScanModal: React.FC<AiScanModalProps> = ({
       setFlaggedCount(debtAccounts.length);
 
       const logs = [
-        'Connecting to Ugu District Revenue & Water Assessment Ledger...',
+        'Connecting to City of uMhlathuze Revenue & Water Assessment Ledger...',
         `Analyzing ${accounts.length} ratepayer properties against municipal credit control criteria...`,
         `Detected ${debtAccounts.length} properties in arrears (30d / 60d / 90d+ overdue).`,
         'Formulating personalized empathy-led debt relief notices with 50% interest write-off clauses...',
@@ -123,7 +123,7 @@ export const AiScanModal: React.FC<AiScanModalProps> = ({
 
               <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 text-[11px] text-slate-400">
                 <span className="text-slate-300 font-bold block mb-1">Notice Template Deployed:</span>
-                "Dear Resident, Ugu District Municipality has flagged an outstanding balance for your property. Settle or set up an approved AOD before November 30 to qualify for the 50% interest remission."
+                "Dear Resident, City of uMhlathuze has flagged an outstanding balance for your property. Settle or set up an approved AOD before November 30 to qualify for the 50% interest remission."
               </div>
 
               <button

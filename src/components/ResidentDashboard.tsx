@@ -13,10 +13,15 @@ import {
   Scale,
   Calendar,
   MapPin,
-  FileCheck
+  FileCheck,
+  Bell,
+  Trash2,
+  Eye,
+  CheckCheck,
+  Inbox
 } from 'lucide-react';
 import { RatepayerAccount, MonthlyRate } from '../types';
-import { formatZAR, generateStatementInvoicePDF, generatePaymentReceiptPDF, generateOfficialClearancePDF } from '../utils/pdfGenerator';
+import { formatZAR, generateMonthlyStatementPDF, generatePaymentReceiptPDF, generateOfficialClearancePDF } from '../utils/pdfGenerator';
 
 interface ResidentDashboardProps {
   account: RatepayerAccount;
@@ -25,6 +30,12 @@ interface ResidentDashboardProps {
   onAskAi: (topic: string) => void;
   onOpenDisputeModal: () => void;
   onOpenCalculator: () => void;
+  onOpenInbox: () => void;
+  onMarkAllInboxRead: () => void;
+  onClearReadMessages: () => void;
+  onViewAndClearMessage?: (id: string) => void;
+  onMarkAllReadyAndClear?: () => void;
+  onRestoreMessages?: () => void;
 }
 
 export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
@@ -34,16 +45,27 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
   onAskAi,
   onOpenDisputeModal,
   onOpenCalculator,
+  onOpenInbox,
+  onMarkAllInboxRead,
+  onClearReadMessages,
+  onViewAndClearMessage,
+  onMarkAllReadyAndClear,
+  onRestoreMessages,
 }) => {
+  const [activeNoticeDetail, setActiveNoticeDetail] = React.useState<boolean>(false);
   const outstandingBills = account.monthlyRates.filter((m) => !m.paid);
   const clearedBills = account.monthlyRates.filter((m) => m.paid);
+
+  const handleDownloadStatement = (month?: MonthlyRate) => {
+    generateMonthlyStatementPDF(account, month);
+  };
 
   const handleDownloadReceipt = () => {
     generatePaymentReceiptPDF(
       account,
       account.lastPayment,
-      'Ugu Online Payment (Ozow / Card)',
-      'UGU-REC-' + account.accNo.slice(-6)
+      'uMhlathuze Online Payment (Ozow / Card)',
+      'UMH-REC-' + account.accNo.slice(-6)
     );
   };
 
@@ -55,6 +77,19 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
       true,
       'Sonke'
     );
+  };
+
+  // Handle viewing the notice in the message bar: marks ready and clears inbox
+  const handleViewAndClearTopNotice = () => {
+    if (account.inbox && account.inbox.length > 0) {
+      const topMsg = account.inbox[0];
+      if (onViewAndClearMessage) {
+        onViewAndClearMessage(topMsg.id);
+      } else {
+        onClearReadMessages();
+      }
+      setActiveNoticeDetail(false);
+    }
   };
 
   return (
@@ -89,7 +124,15 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+          <button
+            onClick={() => handleDownloadStatement()}
+            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-white font-semibold text-xs transition cursor-pointer shadow-sm group"
+            title="Download Official Municipal Monthly Statement (PDF)"
+          >
+            <FileText className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
+            <span>Download Statement</span>
+          </button>
           <button
             onClick={onResetSearch}
             className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition cursor-pointer"
@@ -99,6 +142,134 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Official Municipal Message Bar & Notice Alert */}
+      {account.inbox && account.inbox.length > 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div
+              onClick={() => setActiveNoticeDetail(!activeNoticeDetail)}
+              className="flex items-start sm:items-center gap-3 cursor-pointer group flex-1"
+              title="Click to view message detail, mark as ready, and clear"
+            >
+              <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-white text-xs">Official Municipal Message Bar</span>
+                  {account.inbox.filter((m) => !m.read).length > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded-full animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                      {account.inbox.filter((m) => !m.read).length} Unread Notice
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <CheckCircle2 className="w-3 h-3" /> Marked as Ready • Message Pin Cleared
+                    </span>
+                  )}
+                  <span className="text-[10px] text-sky-400 font-semibold group-hover:underline">
+                    {activeNoticeDetail ? 'Hide Notice Detail' : 'Click to View & Mark Ready'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5 truncate max-w-xl group-hover:text-white transition-colors">
+                  <strong className="text-white">{account.inbox[0]?.title}:</strong>{' '}
+                  <span className="text-slate-400">{account.inbox[0]?.body}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+              {/* Direct Mark as Ready & Clear button */}
+              <button
+                onClick={handleViewAndClearTopNotice}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm shadow-emerald-500/20"
+                title="Mark this message as ready and clear from inbox"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Mark as Ready & Clear</span>
+              </button>
+
+              {account.inbox.length > 1 && onMarkAllReadyAndClear && (
+                <button
+                  onClick={onMarkAllReadyAndClear}
+                  className="px-2.5 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                  title="Mark all notices as ready and clear entire inbox"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>Clear All</span>
+                </button>
+              )}
+
+              <button
+                onClick={onOpenInbox}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                <span>Inbox ({account.inbox.length})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Notice Detail View (Marked as Ready & Viewed) */}
+          {activeNoticeDetail && account.inbox[0] && (
+            <div className="mt-2 p-4 rounded-xl bg-slate-850 border border-sky-500/30 bg-slate-800/80 space-y-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Marked as Ready & Viewed
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Date: {account.inbox[0].date}</span>
+              </div>
+              <h5 className="font-bold text-white text-xs">{account.inbox[0].title}</h5>
+              <p className="text-xs text-slate-300 leading-relaxed">{account.inbox[0].body}</p>
+              <div className="pt-2 border-t border-slate-700 flex justify-end gap-2">
+                <button
+                  onClick={handleViewAndClearTopNotice}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Dismiss & Clear from Inbox</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Message Bar Cleared State */
+        <div className="bg-slate-900/60 border border-emerald-500/30 rounded-2xl p-3.5 px-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-emerald-400">
+            <div className="p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <span className="font-extrabold text-white">Official Municipal Message Bar:</span>{' '}
+              <span className="text-slate-300">
+                All messages have been viewed, marked as ready, and cleared from the inbox. The unread notification pin is removed.
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {onRestoreMessages && (
+              <button
+                onClick={onRestoreMessages}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-slate-700 font-semibold text-[11px] transition cursor-pointer flex items-center gap-1.5"
+                title="Restore demo notices to test inbox again"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Restore Demo Notices</span>
+              </button>
+            )}
+            <button
+              onClick={onOpenInbox}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-semibold text-[11px] transition cursor-pointer flex items-center gap-1"
+            >
+              <Inbox className="w-3 h-3" />
+              <span>Inbox (0)</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3 Core Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -125,7 +296,7 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col gap-2">
+          <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col gap-2.5">
             {account.balance > 0 ? (
               <button
                 onClick={() => onOpenPayment()}
@@ -143,6 +314,14 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
                 <FileCheck className="w-4 h-4" />
               </button>
             )}
+            <button
+              onClick={() => handleDownloadStatement()}
+              className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-750 hover:text-white border border-slate-700 hover:border-slate-600 flex items-center justify-center gap-2 transition cursor-pointer"
+              title="Download official monthly statement and tax invoice PDF"
+            >
+              <FileText className="w-3.5 h-3.5 text-sky-400" />
+              <span>Download Statement (PDF)</span>
+            </button>
           </div>
         </div>
 
@@ -160,7 +339,7 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
               Processed on <strong className="text-slate-200">{account.lastPaymentDate}</strong>
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Ref: eThekwini Electronic Clearing System
+              Ref: uMhlathuze Electronic Clearing System
             </p>
           </div>
 
@@ -227,9 +406,9 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
             <Scale className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-base">Ugu Rates Calculator & Pensioner Rebates</h3>
+            <h3 className="font-bold text-white text-base">uMhlathuze Rates Calculator & Pensioner Rebates</h3>
             <p className="text-xs text-slate-400">
-              Calculate projected monthly rates based on current Ugu District tariffs, sectional title discounts, and pensioner rebates up to R3,500/month.
+              Calculate projected monthly rates based on current City of uMhlathuze tariffs, sectional title discounts, and pensioner rebates up to R3,500/month.
             </p>
           </div>
         </div>
@@ -312,11 +491,12 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
                           <span>Pay</span>
                         </button>
                         <button
-                          onClick={() => generateStatementInvoicePDF(account, month)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer"
-                          title="Download Official Tax Invoice PDF"
+                          onClick={() => handleDownloadStatement(month)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                          title="Download Statement (PDF) for this billing period"
                         >
-                          <Download className="w-4 h-4" />
+                          <FileText className="w-3.5 h-3.5 text-sky-400" />
+                          <span className="text-[11px] font-medium hidden sm:inline">Statement</span>
                         </button>
                       </div>
                     </td>
@@ -366,7 +546,7 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
                       {month.month}
                     </td>
                     <td className="px-6 py-4 text-slate-300">
-                      Monthly Rates & Water Assessment • Ugu District Municipality
+                      Monthly Rates & Water Assessment • City of uMhlathuze
                     </td>
                     <td className="px-6 py-4 font-bold text-right text-emerald-400 whitespace-nowrap text-sm">
                       {formatZAR(month.amount)}
@@ -390,11 +570,12 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({
                           <span>Clearance PDF</span>
                         </button>
                         <button
-                          onClick={() => generateStatementInvoicePDF(account, month)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer"
-                          title="Download Statement PDF"
+                          onClick={() => handleDownloadStatement(month)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                          title="Download Historical Monthly Statement (PDF)"
                         >
-                          <Download className="w-4 h-4" />
+                          <FileText className="w-3.5 h-3.5 text-sky-400" />
+                          <span className="text-[11px] font-medium hidden sm:inline">Statement</span>
                         </button>
                       </div>
                     </td>

@@ -50,9 +50,9 @@ export const ValuationObjectionModal: React.FC<ValuationObjectionModalProps> = (
       // Offline fallback
       setGeneratedLetter(
 `TO: The Municipal Valuer
-Ugu District Municipality
+City of uMhlathuze
 Revenue & Valuation Unit
-Port Shepstone, KwaZulu-Natal
+Richards Bay Civic Centre, KwaZulu-Natal
 
 DATE: ${new Date().toLocaleDateString('en-ZA')}
 RE: FORMAL NOTICE OF OBJECTION IN TERMS OF SECTION 49 / 50 OF THE LOCAL GOVERNMENT: MUNICIPAL PROPERTY RATES ACT (ACT NO. 6 OF 2004)
@@ -100,7 +100,7 @@ Registered Property Owner`
     const doc = new jsPDF();
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Ugu District Municipality', 20, 20);
+    doc.text('City of uMhlathuze', 20, 20);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Section 49/50 MPRA Rates Valuation Objection Notice', 20, 26);
@@ -110,7 +110,7 @@ Registered Property Owner`
     const split = doc.splitTextToSize(generatedLetter, 170);
     doc.text(split, 20, 40);
 
-    doc.save(`Ugu_Valuation_Objection_${account.accNo}.pdf`);
+    doc.save(`uMhlathuze_Valuation_Objection_${account.accNo}.pdf`);
   };
 
   return (
@@ -125,7 +125,7 @@ Registered Property Owner`
             </div>
             <div>
               <h3 className="font-extrabold text-white text-lg">Valuation Objection (Section 49 MPRA)</h3>
-              <p className="text-xs text-slate-400">Ugu District General Valuation Roll Dispute Form</p>
+              <p className="text-xs text-slate-400">City of uMhlathuze General Valuation Roll Dispute Form</p>
             </div>
           </div>
           <button

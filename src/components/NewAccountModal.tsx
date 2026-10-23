@@ -12,7 +12,7 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({ isOpen, onClos
   const [name, setName] = useState('');
   const [saIdNumber, setSaIdNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [suburb, setSuburb] = useState('Morningside, Durban');
+  const [suburb, setSuburb] = useState('Meerensee, Richards Bay');
   const [category, setCategory] = useState<'Residential' | 'Commercial' | 'Sectional Title' | 'Vacant Land'>('Residential');
   const [valuation, setValuation] = useState<number>(1500000);
   const [monthlyAmount, setMonthlyAmount] = useState<number>(1850);
@@ -67,7 +67,7 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({ isOpen, onClos
       inbox: [
         {
           id: `msg-new-1`,
-          title: 'Welcome to eThekwini Municipal Rates Portal',
+          title: 'Welcome to uMhlathuze Municipal Rates Portal',
           date: 'Today',
           body: 'Your property account has been enrolled in the municipal valuation ledger.',
           read: false,
@@ -156,7 +156,7 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({ isOpen, onClos
                 type="text"
                 value={suburb}
                 onChange={(e) => setSuburb(e.target.value)}
-                placeholder="Morningside, Durban"
+                placeholder="Meerensee, Richards Bay"
                 required
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
               />

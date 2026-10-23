@@ -97,7 +97,7 @@ export const ClearanceModal: React.FC<ClearanceModalProps> = ({
                     Apply Official Master Admin Red Seal & Signature (Sonke)
                   </span>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Embeds high-resolution official Ugu District Municipal seal, SHA-256 verification hash, and authorized signature.
+                    Embeds high-resolution official City of uMhlathuze Municipal seal, SHA-256 verification hash, and authorized signature.
                   </p>
                 </div>
               </label>

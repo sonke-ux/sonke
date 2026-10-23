@@ -29,13 +29,13 @@ export const SearchHero: React.FC<SearchHeroProps> = ({ onSearch, accounts, onOp
       <div className="text-center max-w-3xl mx-auto mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold mb-4 shadow-sm">
           <Landmark className="w-4 h-4 text-emerald-400" />
-          <span>Official Ugu District Municipality Rates & Taxes Portal</span>
+          <span>Official City of uMhlathuze Rates & Taxes Portal</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
           Municipal Rates, Valuations & <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400">Clearance Certificates</span>
         </h1>
         <p className="text-slate-400 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-          View property valuation details, inspect monthly rates assessments, generate official Section 118 clearance certificates, and settle accounts across the KwaZulu-Natal South Coast.
+          View property valuation details, inspect monthly rates assessments, generate official Section 118 clearance certificates, and settle accounts across the City of uMhlathuze (Richards Bay & Empangeni).
         </p>
       </div>
 
@@ -82,34 +82,37 @@ export const SearchHero: React.FC<SearchHeroProps> = ({ onSearch, accounts, onOp
           </button>
         </form>
 
-        {/* Demo Fast-Testing Chips */}
+        {/* Demo Fast-Testing Chips: Exactly 2 Examples (True Arrears Example & Paid-Up Example) */}
         <div className="mt-6 pt-5 border-t border-slate-800/80">
           <p className="text-xs font-semibold text-slate-400 mb-2.5 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Fast-Test with Sample Ratepayer Accounts:
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Fast-Test Demonstration Accounts (2 Examples):
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {accounts.slice(0, 4).map((acc) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {accounts.slice(0, 2).map((acc, idx) => (
               <button
                 key={acc.accNo}
                 type="button"
                 onClick={() => handleSelectDemo(acc.accNo)}
-                className="text-left p-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/50 transition cursor-pointer flex items-center justify-between group"
+                className="text-left p-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/50 transition cursor-pointer flex items-center justify-between group shadow-sm"
               >
                 <div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                      {idx === 0 ? 'True Example (Active Bill)' : 'Paid-Up Example'}
+                    </span>
+                  </div>
                   <p className="text-xs font-bold text-slate-200 group-hover:text-sky-300 transition">{acc.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate max-w-[180px]">{acc.address}</p>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[190px]">{acc.address}</p>
                 </div>
                 <div className="text-right">
                   <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    className={`text-[10px] font-bold px-2 py-1 rounded-md ${
                       acc.balance === 0
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : acc.status === '90+ Days'
-                        ? 'bg-rose-500/20 text-rose-300'
-                        : 'bg-amber-500/20 text-amber-300'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                     }`}
                   >
-                    {acc.balance === 0 ? 'Paid Up' : `R ${acc.balance.toLocaleString('en-ZA')}`}
+                    {acc.balance === 0 ? 'Fully Paid Up' : `Due: R ${acc.balance.toLocaleString('en-ZA')}`}
                   </span>
                 </div>
               </button>
@@ -161,7 +164,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({ onSearch, accounts, onOp
             </div>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed mb-3">
-            Estimate your annual and monthly municipal rates assessment based on Ugu District statutory formulas.
+            Estimate your annual and monthly municipal rates assessment based on City of uMhlathuze statutory formulas.
           </p>
           <button
             onClick={onOpenCalculator}

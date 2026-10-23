@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Sparkles, X, Send, User, Loader2, Copy, Check, MessageSquare } from 'lucide-react';
+import { Bot, Sparkles, X, Send, User, Loader2, Copy, Check, MessageSquare, MapPin, ExternalLink } from 'lucide-react';
 import { RatepayerAccount } from '../types';
 
 interface Message {
@@ -7,6 +7,7 @@ interface Message {
   sender: 'user' | 'ai';
   text: string;
   time: string;
+  locations?: Array<{ title: string; url: string; address?: string }>;
 }
 
 interface AIChatDrawerProps {
@@ -26,7 +27,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
     {
       id: 'welcome',
       sender: 'ai',
-      text: "Sanibonani! I am your official Ugu District Municipal Rates & Valuation AI Advisor, powered by Gemini 3 Flash. I can explain property valuations, dispute procedures, Section 118 clearance certificates, and pensioner rebates across the South Coast. How may I assist you today?",
+      text: "Sanibonani! I am your official City of uMhlathuze Municipal Rates & Valuation AI Advisor, powered by Gemini 3 Flash. I can explain property valuations, dispute procedures, Section 118 clearance certificates, and pensioner rebates across Richards Bay, Empangeni, and surrounding areas. How may I assist you today?",
       time: 'Just now',
     },
   ]);
@@ -66,39 +67,69 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/gemini/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          context: account
-            ? {
-                name: account.name,
-                accNo: account.accNo,
-                address: account.address,
-                balance: account.balance,
-                valuation: account.marketValuation,
-              }
-            : null,
-        }),
-      });
+      const isLocationQuery =
+        text.toLowerCase().includes('office') ||
+        text.toLowerCase().includes('location') ||
+        text.toLowerCase().includes('pay point') ||
+        text.toLowerCase().includes('map') ||
+        text.toLowerCase().includes('where') ||
+        text.toLowerCase().includes('kiosk') ||
+        text.toLowerCase().includes('richards bay') ||
+        text.toLowerCase().includes('empangeni') ||
+        text.toLowerCase().includes('esikhaleni') ||
+        text.toLowerCase().includes('meerensee');
 
-      const data = await response.json();
-      const aiReply = data.reply || "I am unable to answer right now. Please contact the Ugu municipal customer service line.";
+      if (isLocationQuery) {
+        const response = await fetch('/api/gemini/maps-grounding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: text }),
+        });
+        const data = await response.json();
 
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: aiReply,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: data.text || 'Here are verified City of uMhlathuze customer service centres and payment points:',
+          locations: data.locations || [],
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } else {
+        const response = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            context: account
+              ? {
+                  name: account.name,
+                  accNo: account.accNo,
+                  address: account.address,
+                  balance: account.balance,
+                  valuation: account.marketValuation,
+                }
+              : null,
+          }),
+        });
 
-      setMessages((prev) => [...prev, aiMessage]);
+        const data = await response.json();
+        const aiReply = data.reply || "I am unable to answer right now. Please contact the uMhlathuze municipal customer service line.";
+
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: aiReply,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+      }
     } catch (err) {
       const fallbackMsg: Message = {
         id: `ai-err-${Date.now()}`,
         sender: 'ai',
-        text: "Under Ugu District Municipal policy, property rates are calculated as: (Market Value - R350,000 primary rebate) × 0.0125 for residential properties. You can view your bill breakdown, download official clearance certificates, or submit an objection directly through this portal.",
+        text: "Under City of uMhlathuze Municipal policy, property rates are calculated as: (Market Value - R350,000 primary rebate) × 0.0125 for residential properties. You can view your bill breakdown, download official clearance certificates, or submit an objection directly through this portal.",
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -108,9 +139,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   };
 
   const quickPrompts = [
+    '📍 Find Municipal Offices & Pay Points',
     'How do I dispute my property valuation?',
     'What is a Section 118 clearance certificate?',
-    'How do I apply for the pensioner rates rebate?',
+    'How do I apply for pensioner rates rebate?',
     'Explain the 50% debt relief incentive.',
   ];
 
@@ -121,7 +153,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         <button
           onClick={onToggle}
           className="fixed bottom-6 right-6 z-40 bg-gradient-to-tr from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white p-4 rounded-full shadow-2xl shadow-sky-500/30 flex items-center justify-center transition-all transform hover:scale-110 cursor-pointer group border border-sky-400/40"
-          title="Chat with Ugu Rates Gemini AI"
+          title="Chat with uMhlathuze Rates Gemini AI"
         >
           <Sparkles className="w-6 h-6 animate-pulse" />
           <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full border border-slate-900 shadow">
@@ -142,7 +174,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               </div>
               <div>
                 <h3 className="font-extrabold text-white text-sm flex items-center gap-1.5">
-                  <span>Ugu Rates AI</span>
+                  <span>uMhlathuze Rates AI</span>
                   <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-1.5 py-0.5 rounded">Gemini 3.8</span>
                 </h3>
                 <p className="text-[10px] text-slate-400">Official Municipal Regulations Advisor</p>
@@ -176,6 +208,35 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
                   }`}
                 >
                   <p>{msg.text}</p>
+
+                  {/* Render Google Maps Grounded Locations */}
+                  {msg.locations && msg.locations.length > 0 && (
+                    <div className="mt-3 space-y-2 pt-2 border-t border-slate-700/60 not-prose">
+                      <span className="text-[10px] font-bold text-sky-400 flex items-center gap-1 uppercase tracking-wider">
+                        <MapPin className="w-3 h-3" /> Grounded Locations (Google Maps):
+                      </span>
+                      {msg.locations.map((loc, idx) => (
+                        <a
+                          key={idx}
+                          href={loc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block p-2 rounded-xl bg-slate-900/90 hover:bg-slate-900 border border-slate-700/80 hover:border-sky-500/50 transition group/loc text-left no-underline"
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="font-bold text-white text-[11px] group-hover/loc:text-sky-300 transition">
+                              {loc.title}
+                            </span>
+                            <ExternalLink className="w-3 h-3 text-sky-400 flex-shrink-0" />
+                          </div>
+                          {loc.address && (
+                            <p className="text-[10px] text-slate-400 mt-0.5">{loc.address}</p>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
                   <span className="block text-[9px] mt-1.5 opacity-60 text-right">{msg.time}</span>
                 </div>
               </div>

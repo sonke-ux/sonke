@@ -28,7 +28,21 @@ export interface InboxMessage {
   date: string;
   body: string;
   read: boolean;
+  ready?: boolean;
+  viewedAt?: string;
   tag: 'Notice' | 'Relief Incentive' | 'Security' | 'Payment';
+}
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  date: string;
+  body: string;
+  read: boolean;
+  ready?: boolean;
+  viewedAt?: string;
+  readBy?: string;
+  tag: 'Clearance Request' | 'Valuation Objection' | 'Payment Settlement' | 'System Notice';
 }
 
 export interface RatepayerAccount {
@@ -61,4 +75,6 @@ export interface AdminUser {
   title: string;
   canStampAndSign: boolean;
   canClearArrears: boolean;
+  canEditRates?: boolean;
+  canDeleteAccounts?: boolean;
 }

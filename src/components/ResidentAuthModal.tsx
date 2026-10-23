@@ -82,7 +82,7 @@ export const ResidentAuthModal: React.FC<ResidentAuthModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-white text-lg">Resident Self-Service</h3>
-              <p className="text-xs text-slate-400">Manage Ugu District Municipal Rates Online</p>
+              <p className="text-xs text-slate-400">Manage City of uMhlathuze Municipal Rates Online</p>
             </div>
           </div>
           <button
@@ -175,7 +175,7 @@ export const ResidentAuthModal: React.FC<ResidentAuthModalProps> = ({
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-bold text-slate-200">Verify you are human</p>
-                  <p className="text-[10px] text-slate-400">Ugu District Bot Protection Active</p>
+                  <p className="text-[10px] text-slate-400">uMhlathuze Bot Protection Active</p>
                 </div>
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
@@ -247,22 +247,21 @@ export const ResidentAuthModal: React.FC<ResidentAuthModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Ugu South Coast Town / Area
+                  uMhlathuze Suburb / Area
                 </label>
                 <select
                   value={regSuburb}
                   onChange={(e) => setRegSuburb(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
-                  <option value="Port Shepstone">Port Shepstone Central</option>
-                  <option value="Shelly Beach">Shelly Beach</option>
-                  <option value="Margate">Margate</option>
-                  <option value="Scottburgh">Scottburgh</option>
-                  <option value="Ramsgate">Ramsgate</option>
-                  <option value="Hibberdene">Hibberdene</option>
-                  <option value="Southbroom">Southbroom</option>
-                  <option value="Harding">Harding</option>
-                  <option value="Pennington">Pennington</option>
+                  <option value="Meerensee">Meerensee, Richards Bay</option>
+                  <option value="Richards Bay CBD">Richards Bay CBD</option>
+                  <option value="Empangeni Central">Empangeni Central</option>
+                  <option value="Arboretum">Arboretum, Richards Bay</option>
+                  <option value="Birdswood">Birdswood, Richards Bay</option>
+                  <option value="eSikhaleni">eSikhaleni</option>
+                  <option value="Alton">Alton Industrial</option>
+                  <option value="Ngwelezana">Ngwelezana</option>
                 </select>
               </div>
 
@@ -297,7 +296,7 @@ export const ResidentAuthModal: React.FC<ResidentAuthModalProps> = ({
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-bold text-slate-200">Verify you are human</p>
-                  <p className="text-[10px] text-slate-400">Ugu District Bot Protection Active</p>
+                  <p className="text-[10px] text-slate-400">uMhlathuze Bot Protection Active</p>
                 </div>
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
